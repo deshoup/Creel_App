@@ -1,7 +1,7 @@
 #Packages to be installed and loaded############################
 library(shiny)
 library(DT)
-library(shinyjs)
+library(shinyjs)#enables some java script functions in shiny
 
 #start main ui.r code#########
 fluidPage(
@@ -33,6 +33,9 @@ fluidPage(
     tabPanel("Creel Planning",
        hr(),  
        fluidRow(
+         #delete this comment and start putting your tab's code here
+         
+         
          
              )
     ),
@@ -44,6 +47,10 @@ fluidPage(
      tabPanel("Data Validation",
         hr(),  
         fluidRow(
+          #delete this comment and start putting your tab's code here
+          
+          
+          
           
         )
      ),
@@ -55,6 +62,10 @@ fluidPage(
       tabPanel("Creel Analysis",
          hr(),  
          fluidRow(
+           #delete this comment and start putting your tab's code here
+           
+           
+           
            
          )
       ),
@@ -66,6 +77,10 @@ fluidPage(
       tabPanel("User's Guide",
          hr(),  
          fluidRow(
+           #delete this comment and start putting your tab's code here
+           
+           
+           
            
          )
     )
