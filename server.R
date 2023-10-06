@@ -6,10 +6,14 @@ library(data.table)#used for fread, which is faster way to load .csv file. Also 
 
 par(bg = "white") #fixes problem where figures that are downloaded have grey background. This makes them white
 
-# creelData <- fread(creeldata.csv)#this will eventually read in the main creel database
+#Load needed files
+lakeinfo <- read.fst("lakeinfo.fst", as.data.table = TRUE)
+speciesinfo <- read.fst("speciesinfo.fst", as.data.table = TRUE)
+# creelData <- read.fst(creeldata.fst, as.data.table=T)#this will eventually read in the main creel database
 
 
 function(input, output, session) {
+  
   #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   ##Creel Planning Tab code##########
   #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

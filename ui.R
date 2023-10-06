@@ -15,7 +15,7 @@ fluidPage(
         column(3,align="center", img(src="ODWClogo.gif", height="auto", width="150px")),
         column(6, align="center", h2("Oklahoma Angler Creel Analysis Application"),
                hr(), 
-               h5("Created by Douglas L. Zentner, Alexis Whiles, Jory Bartnicki and Daniel E. Shoup")),
+               h5("Created by Daniel E. Shoup, Drew Wallace, Brooke Beverly, Douglas L. Zentner, Alexis Whiles, and Jory Bartnicki ")),
         column(3, align="center",img(src="osulogo.png", height="auto", width="180px"))
       )
     ),
