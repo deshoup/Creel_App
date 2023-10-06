@@ -6,7 +6,7 @@ library(data.table)#used for fread, which is faster way to load .csv file. Also 
 
 par(bg = "white") #fixes problem where figures that are downloaded have grey background. This makes them white
 
-# creelData <- fread(creeldata.csv)
+# creelData <- fread(creeldata.csv)#this will eventually read in the main creel database
 
 
 function(input, output, session) {
