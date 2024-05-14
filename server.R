@@ -246,7 +246,12 @@ function(input, output, session) {
         startHour = ifelse(as.numeric(startHour) > 12, as.character(as.numeric(startHour) - 12), startHour),
         endHour = ifelse(as.numeric(endHour) > 12, as.character(as.numeric(endHour) - 12), endHour),
         # Combine hour and minute components with a colon
-        startTimeFormatted = paste(startHour, startMinute, sep = ":"),
+        # ###Dan modified below
+        startTimeFormatted1 = paste(startHour, startMinute, sep = ":"),
+        startTimeFormatted = case_when(shift=="afternoon" ~ paste(startTimeFormatted1, " pm"),
+                                       shift=="morning" & startHour>="12" ~ paste(startTimeFormatted1, " pm"),
+                                       TRUE ~ paste(startTimeFormatted1, " am")),
+        ###end Dan modified code
         endTimeFormatted = paste(endHour, endMinute, sep = ":")
       ) %>%
       # Drop intermediate columns
