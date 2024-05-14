@@ -1,7 +1,12 @@
 #Packages to be installed and loaded############################
 library(shiny)
 library(DT)
-library(shinyjs)#enables some java script functions in shiny
+library(shinyjs)#enables some java script functions in shinylibrary(shiny)
+library(tidyverse)
+library(fst)
+library(data.table)
+library(lubridate)
+library(hms)
 
 #start main ui.r code#########
 fluidPage(
@@ -30,14 +35,23 @@ fluidPage(
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     ##Creel Planning Tab##########
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    #this has start and end date inputs 
     tabPanel("Creel Planning",
-       hr(),  
-       fluidRow(
-         #delete this comment and start putting your tab's code here
-         
-         
-         
-             )
+             hr(),  
+             fluidRow(
+               column(width = 4,
+                      dateInput("start_date", "Select Start Date:", value = format(Sys.Date(), "%Y-%m-%d"), format = "yyyy-mm-dd"),
+                      dateInput("end_date", "Select End Date:", 
+                                value = format(as.Date(Sys.Date()) + 365, "%Y-%m-%d"), 
+                                format = "yyyy-mm-dd"),
+                      sliderInput("sample_percentage", "Percent Effort:", 
+                                  min = 10, max = 100, value = 10, step = 5),
+                      selectizeInput("lakeSelector", "Select a Lake", choices = NULL, multiple = TRUE, options = list(placeholder = 'Select a lake')),
+                      actionButton("toggleTimeFormat", "Toggle Time Format"),
+                      downloadButton("downloadData", "Download Table")  
+               )
+             ),
+             DT::dataTableOutput("creel_table")  
     ),
        
     
