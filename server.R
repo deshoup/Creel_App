@@ -195,7 +195,7 @@ function(input, output, session) {
                    paste0(ifelse(pressure_count_1_hour > 12, pressure_count_1_hour - 12, pressure_count_1_hour), ":", ifelse(pressure_count_1_minute < 10,
                                                                                                                              paste0("0", floor(pressure_count_1_minute)), floor(pressure_count_1_minute))), NA_character_),
           TRUE ~  ifelse(!is.na(pressure_count_1),
-                         paste0(ifelse(pressure_count_1_hour > 12, pressure_count_1_hour - 12, pressure_count_1_hour), ifelse(pressure_count_1_minute < 10,
+                         paste0(ifelse(pressure_count_1_hour > 12, pressure_count_1_hour - 0, pressure_count_1_hour), ifelse(pressure_count_1_minute < 10,
                                                                                                                               paste0("0", floor(pressure_count_1_minute)), floor(pressure_count_1_minute))), NA_character_)
         ),
         pressureCount2 = case_when(
@@ -204,12 +204,12 @@ function(input, output, session) {
                    paste0(ifelse(pressure_count_2_hour > 12, pressure_count_2_hour - 12, pressure_count_2_hour), ":", ifelse(pressure_count_2_minute < 10,
                                                                                                                              paste0("0", floor(pressure_count_2_minute)), floor(pressure_count_2_minute))), NA_character_),
           TRUE ~ ifelse(!is.na(pressure_count_2),
-                        paste0(ifelse(pressure_count_2_hour > 12, pressure_count_2_hour - 12, pressure_count_2_hour), ifelse(pressure_count_2_minute < 10,
+                        paste0(ifelse(pressure_count_2_hour > 12, pressure_count_2_hour - 0, pressure_count_2_hour), ifelse(pressure_count_2_minute < 10,
                                                                                                                              paste0("0", floor(pressure_count_2_minute)), floor(pressure_count_2_minute))), NA_character_)
         )
       ) %>%
       
-      # Add dayName column to switch from numeric to alpha. - shiny doesnt like the lubridate function
+      # Add dayName column to switch from numeric to alpha. - shiny doesn't like the lubridate function
       mutate(
         dayName = case_when(
           dayWeek == 1 ~ "Sunday",
