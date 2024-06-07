@@ -17,11 +17,18 @@ fluidPage(
   titlePanel(
     wellPanel(
       fluidRow(
-        column(3,align="center", img(src="ODWClogo.gif", height="auto", width="150px")),
+        column(3,align="center", img(src="ODWClogo.gif", height="auto", width="100px")),
         column(6, align="center", h2("Oklahoma Angler Creel Analysis Application"),
                hr(), 
                h5("Created by Daniel E. Shoup, Drew Wallace, Brooke Beverly, Douglas L. Zentner, Alexis Whiles, and Jory Bartnicki ")),
-        column(3, align="center",img(src="osulogo.png", height="auto", width="180px"))
+        #below line vertically centers OSU logo...sets height to 110 px
+        tags$style(HTML('
+                      .verticalcenter {
+                      display: table-cell;                      
+                      height: 110px;
+                      vertical-align: middle;
+                      }')),
+        column(3, align="center", img(src="osulogo.png", height="auto", width="auto",class="verticalcenter"))
       )
     ),
     windowTitle = "OK Creel Analysis Application" #this text is what appears as browser title
@@ -38,20 +45,23 @@ fluidPage(
     #this has start and end date inputs 
     tabPanel("Creel Planning",
              hr(),  
-             fluidRow(
-               column(width = 4,
+             fluidRow(               
+               column(width = 3,
                       dateInput("start_date", "Select Start Date:", value = format(Sys.Date(), "%Y-%m-%d"), format = "yyyy-mm-dd"),
                       dateInput("end_date", "Select End Date:", 
                                 value = format(as.Date(Sys.Date()) + 365, "%Y-%m-%d"), 
                                 format = "yyyy-mm-dd"),
+                      
+                      actionButton("toggleTimeFormat", "Toggle Time Format"),
+                      downloadButton("downloadData", "Download Table"),  ),
+               column(width =3,
                       sliderInput("sample_percentage", "Percent Effort:", 
                                   min = 10, max = 100, value = 10, step = 5),
-                      selectizeInput("lakeSelector", "Select a Lake", choices = NULL, multiple = TRUE, options = list(placeholder = 'Select a lake')),
-                      actionButton("toggleTimeFormat", "Toggle Time Format"),
-                      downloadButton("downloadData", "Download Table")  
-               )
-             ),
-             DT::dataTableOutput("creel_table")  
+                      selectizeInput("lakeSelector", "Select a Lake", choices = NULL, multiple = FALSE,
+                                     options = list(placeholder = 'Select a lake'))
+             )),
+            hr(),
+            DT::dataTableOutput("creel_table")  
     ),
        
     
