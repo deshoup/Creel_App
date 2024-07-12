@@ -44,14 +44,12 @@ fluidPage(
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     #this has start and end date inputs 
     tabPanel("Creel Planning",
-             hr(),  
-             fluidRow(               
+             hr(),
+             fluidRow(
                column(width = 3,
-                      dateInput("start_date", "Select Start Date:", value = format(Sys.Date(), "%Y-%m-%d"), format = "yyyy-mm-dd"),
-                      dateInput("end_date", "Select End Date:", 
-                                value = format(as.Date(Sys.Date()) + 365, "%Y-%m-%d"), 
-                                format = "yyyy-mm-dd"),
-                      
+                      dateInput("start_date", "Select Start Date:", value = Sys.Date(), format = "yyyy-mm-dd"),
+                      dateInput("end_date", "Select End Date:", value = Sys.Date() + years(1), format = "yyyy-mm-dd"),
+                    
                       actionButton("toggleTimeFormat", "Toggle Time Format"),
                       downloadButton("downloadData", "Download Table"),  ),
                column(width =3,

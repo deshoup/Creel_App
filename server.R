@@ -44,45 +44,41 @@ function(input, output, session) {
   
   #Building a calendar to randomly sample from with start and end date inputs
   # Generate the full calendar dataset
-  calendarFull <- reactive({
-    calendar <- tibble(date = seq(as.Date(input$start_date), as.Date(input$end_date), by = "1 day"))
-    calendar %>%
+  creelSchedule <- function(start_date, end_date) {
+    calendar <- tibble(date = seq(as.Date(start_date), as.Date(end_date), by = "1 day"))
+    calendar <- calendar %>%
       mutate(
         year = year(date),
         month = month(date),
         dayWeek = wday(date),
-        strata = ifelse(dayWeek %in% c(1, 7), "weekend day", "weekday"), #1 = Sunday, 7 = Saturday
+        strata = ifelse(dayWeek %in% c(1, 7), "weekend day", "weekday"),
         group = 1
       ) %>%
       expand_grid(shift = c("morning", "afternoon")) %>%
       mutate(
-        strata = ifelse(dayWeek == 6 & shift == "afternoon", "weekend day", strata), #6 = Saturday
+        strata = ifelse(dayWeek == 6 & shift == "afternoon", "weekend day", strata),
         quarter = case_when(
           month %in% c(12, 1, 2) ~ "Winter",
           month %in% c(3, 4, 5) ~ "Spring",
           month %in% c(6, 7, 8) ~ "Summer",
           month %in% c(9, 10, 11) ~ "Fall"
         ),
-        Qyear = case_when( #used to prevent having 2 extra sample dates for the 2 caledar years of winter
+        Qyear = case_when(
           quarter == "Winter" & month %in% c(1, 2) ~ year - 1,
-          TRUE ~ year #all other cases besides winter in month 1 or 2
+          TRUE ~ year
         ),
         strata = case_when(
-          month == 7 & day(date) == 4 ~ "weekend day", #accounts for 4th of July
-          month == 7 & day(date) == 3 & (dayWeek %in% c(2, 3)) ~ "weekend day", #4th of July weird Mon and Tues
-          month == 7 & day(date) == 5 & (dayWeek %in% c(5, 6)) ~ "weekend day", #4th of July weird Thur and Fri
+          month == 7 & day(date) == 4 ~ "weekend day",
+          month == 7 & day(date) == 3 & (dayWeek %in% c(2, 3)) ~ "weekend day",
+          month == 7 & day(date) == 5 & (dayWeek %in% c(5, 6)) ~ "weekend day",
           month == 5 & day(date) == max(day(date[month == 5 & dayWeek == 2])) ~ "weekend day",
-          #Memorial day or the last Monday in May
           month == 9 & day(date) == min(day(date[month == 9 & dayWeek == 2])) ~ "weekend day",
-          #Labor day or first Monday in Sept
           TRUE ~ strata
         ),
-        #adding the start and end times from creel calendar
-        #I combined the times for Mar and Nov given for daylight savings to match calendar full
         startTime = case_when(
-          month == 1 & shift == "morning" ~ 0800, #add & timetype = military and then copy line and add timetype = standard
+          month == 1 & shift == "morning" ~ 0800,
           month == 2 & shift == "morning" ~ 0730,
-          month == 3 & shift == "morning" ~ 0730,
+          month == 3 & shift == "morning" ~ if_else(date >= second_sunday_march(year), 0730, 0830),
           month == 4 & shift == "morning" ~ 0700,
           month == 5 & shift == "morning" ~ 0630,
           month == 6 & shift == "morning" ~ 0630,
@@ -90,11 +86,11 @@ function(input, output, session) {
           month == 8 & shift == "morning" ~ 0700,
           month == 9 & shift == "morning" ~ 0730,
           month == 10 & shift == "morning" ~ 0730,
-          month == 11 & shift == "morning" ~ 0730,
+          month == 11 & shift == "morning" ~ if_else(date < first_sunday_november(year), 0730, 0830),
           month == 12 & shift == "morning" ~ 0730,
           month == 1 & shift == "afternoon" ~ 1300,
           month == 2 & shift == "afternoon" ~ 1300,
-          month == 3 & shift == "afternoon" ~ 1330,
+          month == 3 & shift == "afternoon" ~ if_else(date >= second_sunday_march(year), 1330, 1430),
           month == 4 & shift == "afternoon" ~ 1330,
           month == 5 & shift == "afternoon" ~ 1330,
           month == 6 & shift == "afternoon" ~ 1400,
@@ -102,13 +98,13 @@ function(input, output, session) {
           month == 8 & shift == "afternoon" ~ 1400,
           month == 9 & shift == "afternoon" ~ 1400,
           month == 10 & shift == "afternoon" ~ 1330,
-          month == 11 & shift == "afternoon" ~ 1300,
+          month == 11 & shift == "afternoon" ~ if_else(date < first_sunday_november(year), 1300, 1400),
           month == 12 & shift == "afternoon" ~ 1230
         ),
         endTime = case_when(
           month == 1 & shift == "morning" ~ 1300,
           month == 2 & shift == "morning" ~ 1300,
-          month == 3 & shift == "morning" ~ 1330,
+          month == 3 & shift == "morning" ~ if_else(date >= second_sunday_march(year), 1330, 1430),
           month == 4 & shift == "morning" ~ 1330,
           month == 5 & shift == "morning" ~ 1330,
           month == 6 & shift == "morning" ~ 1400,
@@ -116,11 +112,11 @@ function(input, output, session) {
           month == 8 & shift == "morning" ~ 1400,
           month == 9 & shift == "morning" ~ 1400,
           month == 10 & shift == "morning" ~ 1330,
-          month == 11 & shift == "morning" ~ 1300,
+          month == 11 & shift == "morning" ~ if_else(date < first_sunday_november(year), 1300, 1400),
           month == 12 & shift == "morning" ~ 1230,
           month == 1 & shift == "afternoon" ~ 1800,
           month == 2 & shift == "afternoon" ~ 1830,
-          month == 3 & shift == "afternoon" ~ 1930,
+          month == 3 & shift == "afternoon" ~ if_else(date >= second_sunday_march(year), 1930, 2030),
           month == 4 & shift == "afternoon" ~ 2000,
           month == 5 & shift == "afternoon" ~ 2030,
           month == 6 & shift == "afternoon" ~ 2100,
@@ -128,11 +124,12 @@ function(input, output, session) {
           month == 8 & shift == "afternoon" ~ 2030,
           month == 9 & shift == "afternoon" ~ 2000,
           month == 10 & shift == "afternoon" ~ 1900,
-          month == 11 & shift == "afternoon" ~ 1800,
+          month == 11 & shift == "afternoon" ~ if_else(date < first_sunday_november(year), 1800, 1900),
           month == 12 & shift == "afternoon" ~ 1730
         )
       )
-  })
+    return(calendar)
+  }
 
   # sample shifts and extra shifts to get the final output
   # building a function to randomly sample dates from calendarFull
