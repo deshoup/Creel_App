@@ -47,19 +47,19 @@ fluidPage(
              hr(),
              fluidRow(
                column(width = 3,
-                      dateInput("start_date", "Select Start Date:", value = Sys.Date(), format = "yyyy-mm-dd"),
-                      dateInput("end_date", "Select End Date:", value = Sys.Date() + years(1), format = "yyyy-mm-dd"),
-                    
+                      dateInput("start_date", "Select Start Date:", value = Sys.Date(), format = "mm-dd-yyyy"),
+                      dateInput("end_date", "Select End Date:", value = Sys.Date() + years(1), format = "mm-dd-yyyy"),
                       actionButton("toggleTimeFormat", "Toggle Time Format"),
-                      downloadButton("downloadData", "Download Table"),  ),
-               column(width =3,
+                      downloadButton("downloadData", "Download Table")),
+               column(width = 3,
                       sliderInput("sample_percentage", "Percent Effort:", 
                                   min = 10, max = 100, value = 10, step = 5),
                       selectizeInput("lakeSelector", "Select a Lake", choices = NULL, multiple = FALSE,
-                                     options = list(placeholder = 'Select a lake'))
-             )),
-            hr(),
-            DT::dataTableOutput("creel_table")  
+                                     options = list(placeholder = 'Select a lake')),
+                      sliderInput("num_sections", "Number of Lake Sections:",  min = 1, max = 50, value = 1, step = 1) # Allow any input by setting a low minimum value
+               )),
+             hr(),
+             DT::dataTableOutput("creel_table")  
     ),
        
     
