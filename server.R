@@ -164,7 +164,7 @@ function(input, output, session) {
         totDays = as.numeric(difftime(end_date2, start_date2, units = "days")),
         target_weekdays = round(totDays * 4 / (4 + 5) * sample_percentage),
         target_weekends = round(totDays * 5 / (4 + 5) * sample_percentage),
-        .groups = "drop_last" #silences warning message...this is the default behavior but adding this makes less output in Console
+        .groups = "drop_last" # silences warning message
       )
     
     quarterly_dates <- list() # Create a blank list that will fill in loop below
@@ -179,6 +179,7 @@ function(input, output, session) {
           quarter == target_days$quarter[i]
         ) %>%
         slice_sample(n = target_days$target_weekdays[i]) %>%
+        mutate(alternate_status = "Standard") %>%  # Mark these as standard
         ungroup()
       
       sampled_weekends <- calendarFull() %>%
@@ -189,6 +190,7 @@ function(input, output, session) {
           quarter == target_days$quarter[i]
         ) %>%
         slice_sample(n = target_days$target_weekends[i]) %>%
+        mutate(alternate_status = "Standard") %>%  # Mark these as standard
         ungroup()
       
       # Add two extra days for each stratum and mark them as alternates
@@ -200,7 +202,7 @@ function(input, output, session) {
           quarter == target_days$quarter[i]
         ) %>%
         slice_sample(n = 2) %>%
-        mutate(alternate = TRUE) %>%
+        mutate(alternate = TRUE, alternate_status = "Alternate") %>%
         arrange(date)  # Ensure they are sequential
       
       extra_weekends <- calendarFull() %>%
@@ -211,12 +213,11 @@ function(input, output, session) {
           quarter == target_days$quarter[i]
         ) %>%
         slice_sample(n = 2) %>%
-        mutate(alternate = TRUE) %>%
+        mutate(alternate = TRUE, alternate_status = "Alternate") %>%
         arrange(date)  # Ensure they are sequential
       
       # Combine the sampled days with the extra days
-      quarterly_dates <- bind_rows(
-        quarterly_dates,
+      quarterly_dates[[i]] <- bind_rows(
         sampled_weekdays,
         extra_weekdays,
         sampled_weekends,
@@ -225,27 +226,24 @@ function(input, output, session) {
     }
     
     # Ensure each date is unique after all sampling
-    quarterly_dates <- quarterly_dates %>%
+    quarterly_dates <- bind_rows(quarterly_dates) %>%
       distinct(date, .keep_all = TRUE)  # This ensures no duplicate dates
     
+    # Add additional processing
     quarterly_dates %>%
-      select(dayWeek, shift, strata, date, quarter, startTime, endTime) %>%
+      select(dayWeek, shift, strata, date, quarter, startTime, endTime, alternate_status) %>%
       arrange(date) %>%
       mutate(
         direction = sample(c("clockwise", "counterclockwise"), n(), replace = TRUE, prob = c(0.5, 0.5)),
-        # generating a pressure count 3 hours before end time (300) and larger than start time
         pressure_count_1 = random_start_time <- ceiling(runif(n()) * (endTime - startTime - 300)) + startTime,
-        # generating a pressure count at least 1 hour (100) after p. count 1 and 2h (200) before endTime
         pressure_count_2 = ceiling((as.numeric(pressure_count_1) + 100) + runif(n()) * (as.numeric(endTime) - 
                                                                                           (as.numeric(pressure_count_1) + 200))),
-        # converting to portions of 60 minutes rather than 100
         pressure_count_1_hour = floor(pressure_count_1 / 100),
-        pressure_count_1_minute = (pressure_count_1 %% 100) * 0.6, # %% is used to find the percent out of 100, the 0.6 converts it to minutes out of 60 available
+        pressure_count_1_minute = (pressure_count_1 %% 100) * 0.6, # Convert to minutes
         pressure_count_2_hour = floor(pressure_count_2 / 100),
         pressure_count_2_minute = (pressure_count_2 %% 100) * 0.6,
       ) %>%
-      
-      # Add dayName column to switch from numeric to alpha. - shiny doesn't like the lubridate function
+      # Add dayName column to switch from numeric to alpha
       mutate(
         dayName = case_when(
           dayWeek == 1 ~ "Sunday",
@@ -351,14 +349,14 @@ function(input, output, session) {
         lakeName = lakeSelected()
       ) %>%
       select(lakeName, quarter, date, dayName, strata, shift, start_time, end_time, 
-             pressureCount1, pressureCount2, direction) %>%
+             pressureCount1, pressureCount2, direction, alternate_status) %>%
       # Rename columns with prettier names that have spaces for display
       rename(
         'Lake'='lakeName', 'Quarter'='quarter', 'Date'='date', 'Day of week'='dayName', 
         'Day type'='strata', 'Shift'='shift',
         'Start creel'='start_time', 'End creel'='end_time', 
         'Time of pressure count 1'='pressureCount1',
-        'Time of pressure count 2'= 'pressureCount2', 'Pressure count direction'='direction'
+        'Time of pressure count 2'= 'pressureCount2', 'Pressure count direction'='direction', 'Alternate status'= 'alternate_status'
       )
     
     # Add random section if numSections() is valid and greater than 0
