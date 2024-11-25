@@ -48,7 +48,7 @@ fluidPage(
                 
                 
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ##Creel Planning Tab##########
+    #Creel Planning Tab##########
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     #this has start and end date inputs 
     tabPanel("Creel Planning",
@@ -63,7 +63,6 @@ fluidPage(
                #        )
                #        ),
                column(width = 3,
-                      # dateInput("start_date", "Select Start Date:", value = Sys.Date(), format = "mm-dd-yyyy"),
                       dateInput("start_date", "Select Start Date:", value = 
                                     tryCatch({ #below finds the start of the next quarter for start date unless <=2d into current quarter
                                       if(cur_month %in% season_starts & as.numeric(format(Sys.Date(), "%d")) <= 2){
@@ -99,7 +98,7 @@ fluidPage(
        
     
      #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-     ##Data Validation Tab##########
+     #Data Validation Tab##########
      #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
      tabPanel("Data Validation",
         hr(),  
@@ -114,7 +113,7 @@ fluidPage(
                 
         
       #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      ##Analysis Tab##########
+      #Analysis Tab##########
       #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       tabPanel("Creel Analysis",
          hr(),  
@@ -129,7 +128,7 @@ fluidPage(
       ),
     
     
-     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       ##User's guide tab Tab##########
       #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       tabPanel("User's Guide",

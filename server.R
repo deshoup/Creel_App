@@ -1,4 +1,4 @@
-#Packages to be installed and loaded############################
+#Packages to be loaded and other files/settings used in entire app############################
 library(shiny)
 library(tidyverse)
 library(fst)
@@ -18,10 +18,11 @@ lakeinfo <- read.fst("lakeinfo.fst", as.data.table = TRUE)
 
 function(input, output, session) {
   
-  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ##Creel Planning Tab code##########
-  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#Creel Planning Tab code####
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   
+  ####initial setup stuff#################
   # Observe changes in the selected input and update choices
   observe({
     updateSelectizeInput(session, "lakeSelector", 
@@ -93,10 +94,7 @@ function(input, output, session) {
     updateDateInput(session, "end_date", value = as.Date(input$start_date) + years(1) - days(1))
   })
   
-  ########Building a calendar and function to randomly sample dates from a quarter###########
-  
-  #Building a calendar to randomly sample from with start and end date inputs
-  # Generate the full calendar dataset
+  ########Building a calendar of available dates###########
   calendarFull <- reactive({
     calendar <- tibble(date = seq(as.Date(input$start_date), as.Date(input$end_date), by = "1 day"))
 
@@ -190,9 +188,8 @@ function(input, output, session) {
       ) %>%
       select(-dst_start, -dst_end) # Remove intermediate DST columns after usage
   })
- 
-  # sample shifts and extra shifts to get the final output
-  # building a function to randomly sample dates from calendarFull
+  
+  ########Selecting dates from calendarFull that will be used for sampling or alternates and create pressure counts###########
   creelSchedule <- reactive({
     sample_percentage <- input$sample_percentage / 100  # Convert percentage to fraction
     
@@ -299,7 +296,8 @@ function(input, output, session) {
     # Bind list from above loop into full data frame
         quarterly_dates <- bind_rows(quarterly_dates) 
     
-    # Add additional processing
+        
+    #Create pressure count information
     quarterly_dates %>%
           #Dan changed next line to use monthly information for Will Sims version
           # select(dayWeek, shift, strata, month, date, quarter, startTime, endTime, Shift_len, alternate_status) %>%
@@ -331,20 +329,20 @@ function(input, output, session) {
       )
   })
   
-  # Toggle time format when the button is clicked
+  ########Toggle time format when the button is clicked###############
+  #use button input to set desired time format
   observeEvent(input$toggleTimeFormat, {
     if (timeFormat() == "military") {
       timeFormat("standard")
     } else {
       timeFormat("military")
     }
-    
   })
   
   # Convert times between standard/military time as toggleTimeFormat is changed
   creelScheduleTimeFormated <- reactive({
     # Get the base data
-    creel_data <- creelSchedule() %>%
+    creel_data_timeformatted <- creelSchedule() %>%
       mutate(
         pressureCount1 = case_when(
           timeFormat() == "standard" ~
@@ -417,53 +415,65 @@ function(input, output, session) {
                      ifelse(endMinute < 10, paste0("0", floor(endMinute)), floor(endMinute))
                    ), NA_character_
             )
-        ),
-        lakeName = lakeSelected(),
-        
-        #below line used only if creel site selection is done with weighted randomization
-        # siteProbData2 <- siteProbData() %>% filter(!is.na(Site.Name) & !is.na(Probability))
-        # 
-        #below line could be used to produce weighted random sites selection
-        # random_section = sample(siteProbData2$Site.Name, size = n(), replace = TRUE, prob = 
-        #     as.numeric(siteProbData2$Probability)),
-        # if (!is.null(numSections()) && numSections() > 0) {
-        #   creel_data <- creel_data %>%
-        #     mutate(random_section = sample(1:numSections(), n(), replace = TRUE))
-        # }
-        random_section = case_when(!is.null(numSections()) && numSections() > 0 ~
-                                 sample(1:numSections(), n(), replace = TRUE),
-                                 TRUE ~ NA),
-        date=format(date,"%m/%d/%Y")
-      ) %>% 
-      #Dan modified below to include month...retaining in case we get to adding function to target sampling hrs/wk
-      # arrange(month, desc(alternate_status), date) %>% 
-      # select(lakeName, Qyear, quarter, date, dayName, strata, random_section, shift, start_time, end_time, Shift_len,
-      #        pressureCount1, pressureCount2, direction, alternate_status) %>%
-      arrange(Qyear, quarter, desc(alternate_status), as.Date(date, "%m-%d-%Y")) %>%
-      select(lakeName, quarter, date, dayName, strata, random_section, shift, start_time, end_time,
-             pressureCount1, pressureCount2, direction, alternate_status) %>%
-      # Rename columns with prettier names that have spaces for display
-          #below version should be used if doing monthly stratification and you want shift duration in final table
-          # rename(
-          #   'Lake'='lakeName', 'Quarter'='quarter', 'Date'='date', 'Day of week'='dayName',
-          #   'Day type'='strata', 'Creel section'='random_section','Shift'='shift',
-          #   'Start creel'='start_time', 'End creel'='end_time', 'Shift duration'='Shift_len',
-          #   'Time of pressure count 1'='pressureCount1',
-          #   'Time of pressure count 2'= 'pressureCount2', 'Pressure count direction'='direction', 'Alternate status'= 'alternate_status'
-          # )
-        rename(
-          'Lake'='lakeName', 'Quarter'='quarter', 'Date'='date', 'Day of week'='dayName',
-          'Day type'='strata', 'Creel section'='random_section','Shift'='shift',
-          'Start creel'='start_time', 'End creel'='end_time', 'Time of pressure count 1'='pressureCount1',
-          'Time of pressure count 2'= 'pressureCount2', 'Pressure count direction'='direction', 'Alternate status'= 'alternate_status'
         )
+      )
+      return(creel_data_timeformatted)
+    })
     
-    creel_data
-  })
+  ########Adding random lake section selection and formatting for final table###########
+  creelScheduleFinalFormated <- reactive({
+    creel_data <- creelScheduleTimeFormated() %>% 
+      mutate(lakeName = lakeSelected(),
+            #below line used only if creel site selection is done with weighted randomization
+            # siteProbData2 <- siteProbData() %>% filter(!is.na(Site.Name) & !is.na(Probability))
+            # 
+            #below line could be used to produce weighted random sites selection
+            # random_section = sample(siteProbData2$Site.Name, size = n(), replace = TRUE, prob = 
+            #     as.numeric(siteProbData2$Probability)),
+            # if (!is.null(numSections()) && numSections() > 0) {
+            #   creel_data <- creel_data %>%
+            #     mutate(random_section = sample(1:numSections(), n(), replace = TRUE))
+            # }
+          random_section = case_when(!is.null(numSections()) && numSections() > 0 ~
+                                   sample(1:numSections(), n(), replace = TRUE),
+                                   TRUE ~ NA),
+          date=format(date,"%m/%d/%Y"),
+          quarter_sort = case_when(
+                                   quarter=="Spring" ~ 1,
+                                   quarter=="Summer" ~ 2,
+                                   quarter=="Fall" ~ 3,
+                                   quarter=="Winter" ~ 4)
+        ) %>% 
+          #Dan modified below to include month...retaining in case we get to adding function to target sampling hrs/wk
+          # arrange(month, desc(alternate_status), date) %>% 
+          # select(lakeName, Qyear, quarter, date, dayName, strata, random_section, shift, start_time, end_time, Shift_len,
+          #        pressureCount1, pressureCount2, direction, alternate_status) %>%
+          arrange(Qyear, quarter_sort, desc(alternate_status), as.Date(date, "%m-%d-%Y")) %>%
+          select(lakeName, quarter, date, dayName, strata, random_section, shift, start_time, end_time,
+                 pressureCount1, pressureCount2, direction, alternate_status) %>%
+          # Rename columns with prettier names that have spaces for display
+              #below version should be used if doing monthly stratification and you want shift duration in final table
+              # rename(
+              #   'Lake'='lakeName', 'Quarter'='quarter', 'Date'='date', 'Day of week'='dayName',
+              #   'Day type'='strata', 'Creel section'='random_section','Shift'='shift',
+              #   'Start creel'='start_time', 'End creel'='end_time', 'Shift duration'='Shift_len',
+              #   'Time of pressure count 1'='pressureCount1',
+              #   'Time of pressure count 2'= 'pressureCount2', 'Pressure count direction'='direction', 'Alternate status'= 'alternate_status'
+              # )
+            rename(
+              'Lake'='lakeName', 'Quarter'='quarter', 'Date'='date', 'Day of week'='dayName',
+              'Day type'='strata', 'Creel section'='random_section','Shift'='shift',
+              'Start creel'='start_time', 'End creel'='end_time', 'Time of pressure count 1'='pressureCount1',
+              'Time of pressure count 2'= 'pressureCount2', 'Pressure count direction'='direction', 'Alternate status'= 'alternate_status'
+            )
+        
+        creel_data
+    })
   
-  # Render the table
+  
+  ########Render the table and download button###########
   output$creel_table <- renderDT({
-    df <- creelScheduleTimeFormated()
+    df <- creelScheduleFinalFormated()
     
     datatable(
       df,
@@ -487,29 +497,29 @@ function(input, output, session) {
     }
   ) 
   
-  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ##Data Validation Tab code##########
-  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#Data Validation Tab code##########
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   
   
   
   
   
-  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ##Analysis Tab code##########
-  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#Analysis Tab code##########
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   
   
   
   
   
-  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  ##User's guide Tab code##########
-  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#User's guide Tab code##########
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   
   
   
   
   
-  
+#end function...no code below this line  
 }
