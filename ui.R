@@ -64,34 +64,54 @@ fluidPage(
                #        ),
                column(width = 3,
                       dateInput("start_date", "Select Start Date:", value = 
-                                    tryCatch({ #below finds the start of the next quarter for start date unless <=2d into current quarter
-                                      if(cur_month %in% season_starts & as.numeric(format(Sys.Date(), "%d")) <= 2){
+                                    tryCatch({ #below finds the start of the next quarter for start date unless <=3d into current quarter
+                                      if(cur_month %in% season_starts & as.numeric(format(Sys.Date(), "%d")) <= 3){
                                         Sys.Date()
                                       }else{
                                         next_season_index <- (min(which(season_starts >= cur_month+1)))
-                                        if(next_season_index == 5) {
-                                          as.Date(paste0(format(Sys.Date(), "%Y")+1, "-03-01"))
+                                        if(next_season_index == 5) {#if current season is fall need to add 1 to yr and start in March
+                                          as.Date(paste0(as.numeric(format(Sys.Date(), "%Y"))+1, "-03-01"))
                                         }else{
-                                          as.Date(paste0(format(Sys.Date(), "%Y"), "-", sprintf("%02d", season_starts[next_season_index]), "-01"))
+                                          as.Date(paste0(format(Sys.Date(), "%Y"), "-", sprintf("%02d",#"%02d" specifies decimal format with 2 characters adding leading 0 if needed (i.e., for single digit returns)
+                                                  season_starts[next_season_index]), "-01"))
                                         }
                                       }
                                     }, error = function(e) Sys.Date()),
                                 format = "mm-dd-yyyy"),
-                      dateInput("end_date", "Select End Date:", value = Sys.Date() + years(1), format = "mm-dd-yyyy"),
-                      #below for calculating days from target hr/wk rather than % of days
+                      dateInput("end_date", "Select End Date:", value = 
+                                  tryCatch({ #below finds the start of the next quarter for start date unless <=3d into current quarter
+                                    if(cur_month %in% season_starts & as.numeric(format(Sys.Date(), "%d")) <= 3){
+                                      Sys.Date() + years(1) - days(1)
+                                    }else{
+                                      next_season_index <- (min(which(season_starts >= cur_month+1)))
+                                      if(next_season_index == 5) {
+                                        as.Date(paste0(as.numeric(format(Sys.Date(), "%Y"))+1, "-03-01")) + years(1) - days(1)
+                                      }else{
+                                        as.Date(paste0(format(Sys.Date(), "%Y"), "-", sprintf("%02d", 
+                                                season_starts[next_season_index]), "-01")) + years(1) - days(1)
+                                      }
+                                    }
+                                  }, error = function(e) Sys.Date()),
+                                format = "mm-dd-yyyy"),
+
+                      # below for calculating days from target hr/wk rather than % of days
                       # sliderInput("sample_hPerWk", "Target hr/wk:", 
                       #             min = 10, max = 40, value = 30, step = 1),
                       selectizeInput("lakeSelector", "Select Lake Name", choices = NULL, multiple = FALSE,
                                      options = list(placeholder = 'Select a lake')),
                       
-                      actionButton("toggleTimeFormat", "Toggle sm/pm or military"),
+                      actionButton("toggleTimeFormat", "Toggle am/pm or military"),
                       downloadButton("downloadData", "Download Table")),
                
                column(width = 3,
-                      sliderInput("sample_percentage", "Percent Effort:",
-                                  min = 10, max = 100, value = 10, step = 5),
-                      sliderInput("num_sections", "Number of Lake Sections:",  min = 1, max = 50, value = 1, step = 1) # Allow any input by setting a low minimum value
+                      sliderInput("num_sections", "Number of Lake Sections:",  min = 1, max = 50, 
+                                  value = 1, step = 1),
+                      hr(),
+                      h4("Effort type (note: "),
+                      sliderInput("sample_percentage", "Percent of days to creel:",
+                                  min = 10, max = 100, value = 10, step = 5)
                )),
+             uiOutput("date_errors"), #display any date selection errors
              hr(), 
              DT::dataTableOutput("creel_table")
     ),

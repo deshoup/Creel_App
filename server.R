@@ -23,12 +23,69 @@ function(input, output, session) {
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   
   ####initial setup stuff#################
-  # Observe changes in the selected input and update choices
+  #used to prevent running code if we do not have valid start and end dates
+  good_dates <- reactive({
+    if(as.Date(input$start_date) < as.Date(input$end_date) & #start date must come before end date
+       as.Date(input$end_date) - as.Date(input$start_date) < (5*366) & #cannot use more than 5 years of planning
+       as.Date(input$start_date) >= Sys.Date()-7 & #cannot use dates older than today
+       end_date_updated()==T #check to be sure end_date was updated if start_date changed
+     ){
+      "good"
+    }else{return(NA)}
+  })
+  
+  #used to force end_date to update before any other calculations are done
+  end_date_updated <- reactiveVal(value = F)
+  observeEvent(input$end_date,{
+    if(
+      if(as.numeric(format(input$start_date, "%m"))==2 & as.numeric(format(input$start_date, "%d"))==29){
+        input$end_date==input$start_date - days(1) + years(1)
+      }else{
+        input$end_date==input$start_date + years(1) - days(1)
+      }
+    ){end_date_updated(T)}
+  })
+ 
+  #Update end date as 1 year after start date if start date changed.
+  observeEvent(input$start_date, {
+    req(input$start_date)
+    if(as.numeric(format(input$start_date, "%m"))==2 & as.numeric(format(input$start_date, "%d"))==29){
+      if(input$end_date!=input$start_date - days(1) + years(1)){
+        end_date_updated(F)
+        updateDateInput(session, "end_date", value = as.Date(input$start_date) - days(1) + years(1))
+      }
+    }else{
+      if(input$end_date!=input$start_date + years(1) - days(1)){
+        end_date_updated(F)
+        updateDateInput(session, "end_date", value = as.Date(input$start_date) + years(1) - days(1))
+      }
+    }
+  })
+  
+  #render messages about any date errors
+   date_error_messages <- reactive({
+     req(end_date_updated()==T)
+        if(as.Date(input$start_date) >= as.Date(input$end_date)){ #start date must come before end date
+            "Start date must come before end date"
+          }else if (as.Date(input$end_date) - as.Date(input$start_date) > (5*366)){#cannot use more than 5 years of planning
+            "the app can only plan a maximum of 5 years of creeling"
+          }else if (as.Date(input$start_date) < Sys.Date()-7){
+            "Dates more than 7d in the past cannot be used"
+          }else{NA}
+    })
+   output$date_errors <-renderUI({
+     req(input$start_date, input$end_date)
+     if (!is.na(date_error_messages())
+     ) {h3(style = "color: blue;",date_error_messages())}
+   })
+  
+  #create lake name selectize box options
   observe({
     updateSelectizeInput(session, "lakeSelector", 
                          choices = c(unique(lakeinfo$Lake.Name)),  
                          options = list(onInitialize = I('function() { this.setValue(""); }'))) #prevents selecting first item in list by default
   })
+  
 
   # # Code to handle site probability for weighting by site for Will Sims...I'm saving in case we later want to implement this####
   #     siteProbData <- reactiveVal(data.frame(Site.Name = c("Dam","Lower Dam","Simp-Watts WMU","Gore Landing","River Rd"),
@@ -89,13 +146,9 @@ function(input, output, session) {
     }
   })
   
-  # Add function to pick end date as 1 year after start date when user enters a start date in the date selection box.
-  observeEvent(input$start_date, {
-    updateDateInput(session, "end_date", value = as.Date(input$start_date) + years(1) - days(1))
-  })
-  
   ########Building a calendar of available dates###########
   calendarFull <- reactive({
+    req(input$start_date, input$end_date, good_dates()=="good")
     calendar <- tibble(date = seq(as.Date(input$start_date), as.Date(input$end_date), by = "1 day"))
 
     # Calculate DST start and end dates for each year in the date range
@@ -126,17 +179,17 @@ function(input, output, session) {
           TRUE ~ year
         ),
         strata = case_when(
-          month == 7 & day(date) == 4 ~ "weekend", 
-          month == 7 & day(date) == 3 & (dayWeek %in% c(2, 3)) ~ "weekend", 
-          month == 7 & day(date) == 5 & (dayWeek %in% c(5, 6)) ~ "weekend",
-          month == 5 & day(date) == max(day(date[month == 5 & dayWeek == 2])) ~ "weekend", 
-          month == 9 & day(date) == min(day(date[month == 9 & dayWeek == 2])) ~ "weekend",
+          month == 7 & day(date) == 4 ~ "weekend", #accounts for 4th of July
+          month == 7 & day(date) == 3 & (dayWeek %in% c(2, 3)) ~ "weekend", #3rd of July is Mon or Tues
+          month == 7 & day(date) == 5 & (dayWeek %in% c(5, 6)) ~ "weekend", #5th of July is Thur or Fri
+          month == 5 & day(date) == max(day(date[month == 5 & dayWeek == 2])) ~ "weekend", #Memorial day, which is last Monday in May
+          month == 9 & day(date) == min(day(date[month == 9 & dayWeek == 2])) ~ "weekend", #Labor day, which is first Monday in Sept
           TRUE ~ strata
         ),
         startTime = case_when(
           month == 1 & shift == "morning" ~ 0800,
           month == 2 & shift == "morning" ~ 0730,
-          month == 3 & shift == "morning" ~ if_else(is_dst, 0700, 0800),
+          month == 3 & shift == "morning" ~ if_else(is_dst, 0800, 0700),
           month == 4 & shift == "morning" ~ 0700,
           month == 5 & shift == "morning" ~ 0630,
           month == 6 & shift == "morning" ~ 0630,
@@ -144,11 +197,11 @@ function(input, output, session) {
           month == 8 & shift == "morning" ~ 0700,
           month == 9 & shift == "morning" ~ 0730,
           month == 10 & shift == "morning" ~ 0730,
-          month == 11 & shift == "morning" ~ if_else(is_dst, 0700, 0800),
+          month == 11 & shift == "morning" ~ if_else(is_dst, 0800, 0700),
           month == 12 & shift == "morning" ~ 0730,
           month == 1 & shift == "afternoon" ~ 1300,
           month == 2 & shift == "afternoon" ~ 1300,
-          month == 3 & shift == "afternoon" ~ if_else(is_dst, 1300, 1400),
+          month == 3 & shift == "afternoon" ~ if_else(is_dst, 1400, 1300),
           month == 4 & shift == "afternoon" ~ 1330,
           month == 5 & shift == "afternoon" ~ 1330,
           month == 6 & shift == "afternoon" ~ 1400,
@@ -156,13 +209,13 @@ function(input, output, session) {
           month == 8 & shift == "afternoon" ~ 1400,
           month == 9 & shift == "afternoon" ~ 1400,
           month == 10 & shift == "afternoon" ~ 1330,
-          month == 11 & shift == "afternoon" ~ if_else(is_dst, 1230, 1330),
+          month == 11 & shift == "afternoon" ~ if_else(is_dst, 1330, 1230),
           month == 12 & shift == "afternoon" ~ 1230
         ),
         endTime = case_when(
           month == 1 & shift == "morning" ~ 1300,
           month == 2 & shift == "morning" ~ 1300,
-          month == 3 & shift == "morning" ~ if_else(is_dst, 1300, 1400),
+          month == 3 & shift == "morning" ~ if_else(is_dst, 1400, 1300),
           month == 4 & shift == "morning" ~ 1330,
           month == 5 & shift == "morning" ~ 1330,
           month == 6 & shift == "morning" ~ 1400,
@@ -170,11 +223,11 @@ function(input, output, session) {
           month == 8 & shift == "morning" ~ 1400,
           month == 9 & shift == "morning" ~ 1400,
           month == 10 & shift == "morning" ~ 1330,
-          month == 11 & shift == "morning" ~ if_else(is_dst, 1230, 1330),
+          month == 11 & shift == "morning" ~ if_else(is_dst, 1330, 1230),
           month == 12 & shift == "morning" ~ 1230,
           month == 1 & shift == "afternoon" ~ 1800,
           month == 2 & shift == "afternoon" ~ 1830,
-          month == 3 & shift == "afternoon" ~ if_else(is_dst, 1900, 2000),
+          month == 3 & shift == "afternoon" ~ if_else(is_dst, 2000, 1900),
           month == 4 & shift == "afternoon" ~ 2000,
           month == 5 & shift == "afternoon" ~ 2030,
           month == 6 & shift == "afternoon" ~ 2100,
@@ -182,8 +235,8 @@ function(input, output, session) {
           month == 8 & shift == "afternoon" ~ 2030,
           month == 9 & shift == "afternoon" ~ 2000,
           month == 10 & shift == "afternoon" ~ 1900,
-          month == 11 & shift == "afternoon" ~ if_else(is_dst, 1230, 1330),
-          month == 12 & shift == "afternoon" ~ 1230
+          month == 11 & shift == "afternoon" ~ if_else(is_dst, 1830, 1730),
+          month == 12 & shift == "afternoon" ~ 1730
         )
       ) %>%
       select(-dst_start, -dst_end) # Remove intermediate DST columns after usage
@@ -191,6 +244,7 @@ function(input, output, session) {
   
   ########Selecting dates from calendarFull that will be used for sampling or alternates and create pressure counts###########
   creelSchedule <- reactive({
+    req(calendarFull())
     sample_percentage <- input$sample_percentage / 100  # Convert percentage to fraction
     
     ##Dan added for Will Sims to calc based on target hr/wk rather than % of days...saving this in case we want to implement it later in shiny app
@@ -341,6 +395,7 @@ function(input, output, session) {
   
   # Convert times between standard/military time as toggleTimeFormat is changed
   creelScheduleTimeFormated <- reactive({
+    req(good_dates()=="good", creelSchedule())
     # Get the base data
     creel_data_timeformatted <- creelSchedule() %>%
       mutate(
@@ -422,6 +477,7 @@ function(input, output, session) {
     
   ########Adding random lake section selection and formatting for final table###########
   creelScheduleFinalFormated <- reactive({
+    req(good_dates()=="good", creelScheduleTimeFormated())
     creel_data <- creelScheduleTimeFormated() %>% 
       mutate(lakeName = lakeSelected(),
             #below line used only if creel site selection is done with weighted randomization
